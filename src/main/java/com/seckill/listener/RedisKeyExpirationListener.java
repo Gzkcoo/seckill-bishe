@@ -1,4 +1,4 @@
-package com.seckill.config;//package com.seckill.config;
+package com.seckill.listener;//package com.seckill.config;
 
 import com.seckill.error.BusinessException;
 import com.seckill.service.OrderService;
