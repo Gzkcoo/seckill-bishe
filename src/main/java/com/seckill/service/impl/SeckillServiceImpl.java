@@ -1,8 +1,10 @@
 package com.seckill.service.impl;
 
 import com.seckill.controller.viewobject.SeckillVO;
+import com.seckill.dao.AnnounceDOMapper;
 import com.seckill.dao.ProductDOMapper;
 import com.seckill.dao.SeckillDOMapper;
+import com.seckill.dataobject.AnnounceDO;
 import com.seckill.dataobject.ProductDO;
 import com.seckill.dataobject.SeckillDO;
 import com.seckill.dataobject.StockDO;
@@ -14,6 +16,8 @@ import com.seckill.service.UserService;
 import com.seckill.service.model.ProductModel;
 import com.seckill.service.model.SeckillModel;
 import com.seckill.service.model.UserModel;
+import org.apache.catalina.User;
+import org.checkerframework.checker.units.qual.A;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.BeanUtils;
@@ -42,6 +46,9 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private AnnounceDOMapper announceDOMapper;
 
     @Override
     public SeckillModel getSeckillModel(Integer id) {
@@ -176,6 +183,19 @@ public class SeckillServiceImpl implements SeckillService {
         redisTemplate.delete("seckill_validate_id"+seckillId);
         redisTemplate.opsForValue().set("seckill_door_count_"+seckillId,0);
         redisTemplate.delete("seckill_" + seckillId);
+
+    }
+
+    @Override
+    @Transactional
+    public void subscribeSeckill(UserModel userModel, Integer seckillId) {
+
+        AnnounceDO announceDO = new AnnounceDO();
+        SeckillDO seckillDO = seckillDOMapper.selectByPrimaryKey(seckillId);
+        announceDO.setPostTime(seckillDO.getStartTime());
+        announceDO.setContent("您订阅的"+ seckillDO.getName() +"秒杀活动将要开始啦");
+        announceDO.setUserId(userModel.getId());
+        announceDOMapper.insertSelective(announceDO);
 
     }
 

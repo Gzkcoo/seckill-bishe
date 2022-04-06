@@ -5,6 +5,7 @@ import com.seckill.dao.UserDOMapper;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
 import com.seckill.response.CommonReturnType;
+import com.seckill.service.SeckillService;
 import com.seckill.service.UserService;
 import com.seckill.service.model.UserModel;
 import io.swagger.annotations.Api;
@@ -46,6 +47,9 @@ public class UserController extends BaseController{
 
     @Autowired
     private RedisTemplate redisTemplate;
+
+    @Autowired
+    private SeckillService seckillService;
 
 
     //用户登陆接口
@@ -257,6 +261,35 @@ public class UserController extends BaseController{
         return CommonReturnType.create(userVO);
     }
 
+    //用户订阅秒杀提醒
+    @ApiOperation("用户订阅秒杀提醒")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "token", value = "已登录用户唯一识别码", required = true,
+                    dataType = "string"),
+            @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
+                    dataType = "int")
+    })
+    @RequestMapping(value = "/subscribe",method = RequestMethod.POST,consumes={CONTENT_TYPE_FORMED})
+    @ResponseBody
+    public CommonReturnType subscribeSeckill(@RequestParam(name = "token") String token,
+                                             @RequestParam(name = "seckillId") Integer seckillId) throws BusinessException {
+
+        if (org.apache.commons.lang3.StringUtils.isEmpty(token)){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
+        if (userModel == null){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        seckillService.subscribeSeckill(userModel,seckillId);
+
+        //返回通用对象
+        return CommonReturnType.create(null);
+    }
+
+
     private UserVO convertFromModel(UserModel userModel){
         if (userModel == null){
             return null;
@@ -265,6 +298,8 @@ public class UserController extends BaseController{
         BeanUtils.copyProperties(userModel,userVO);
         return userVO;
     }
+
+
 
 
 }

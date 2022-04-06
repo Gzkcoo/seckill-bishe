@@ -36,7 +36,7 @@
                enableUpdateByExample="false" enableDeleteByExample="false"
                enableSelectByExample="false" selectByExampleQueryId="false"></table>
         -->
-        <table tableName="manager_permission"  domainObjectName="ManagerPermissionDO" enableCountByExample="false"
+        <table tableName="announce"  domainObjectName="AnnounceDO" enableCountByExample="false"
                enableUpdateByExample="false" enableDeleteByExample="false"
                enableSelectByExample="false" selectByExampleQueryId="false"></table>
     </context>

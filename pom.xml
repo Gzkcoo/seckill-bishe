@@ -111,9 +111,13 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-websocket</artifactId>
     </dependency>
+      <dependency>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok</artifactId>
+      </dependency>
 
 
-<!--    &lt;!&ndash; maven导入 &ndash;&gt;-->
+      <!--    &lt;!&ndash; maven导入 &ndash;&gt;-->
 <!--    <dependency>-->
 <!--      <groupId>cloud.tianai.captcha</groupId>-->
 <!--      <artifactId>tianai-captcha-springboot-starter</artifactId>-->

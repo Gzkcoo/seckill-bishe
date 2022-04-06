@@ -3,6 +3,7 @@ package com.seckill.service;
 import com.seckill.dataobject.SeckillDO;
 import com.seckill.error.BusinessException;
 import com.seckill.service.model.SeckillModel;
+import com.seckill.service.model.UserModel;
 
 import java.util.List;
 
@@ -24,6 +25,9 @@ public interface SeckillService {
 
     //紧急下线
     void getOffSeckillById(Integer id) throws BusinessException;
+
+    //订阅秒杀提醒
+    void subscribeSeckill(UserModel userModel, Integer seckillId);
 
 
 }
