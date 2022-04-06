@@ -5,6 +5,7 @@ import com.seckill.dataobject.*;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
 import com.seckill.service.UserService;
+import com.seckill.service.model.ScreenRuleModel;
 import com.seckill.service.model.UserModel;
 import com.seckill.validator.ValidatorImpl;
 import org.apache.commons.lang3.StringUtils;
@@ -136,12 +137,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public boolean userScreening(UserModel userModel,Integer seckillId) throws BusinessException {
 
-        ScreenRuleDO screenRuleDO = (ScreenRuleDO) redisTemplate.opsForValue().get("ScreenRule");
-        if (screenRuleDO == null){
-            screenRuleDO = screenRuleDOMapper.selectByPrimaryKey(1);
+        ScreenRuleModel screenRuleModel = (ScreenRuleModel) redisTemplate.opsForValue().get("ScreenRule");
+        if (screenRuleModel == null){
+            ScreenRuleDO screenRuleDO = screenRuleDOMapper.selectByPrimaryKey(1);
+            screenRuleModel = this.convertFromScreenRuleDO(screenRuleDO);
         }
+
 
         SeckillLogDO seckillLogDO = new SeckillLogDO();
         seckillLogDO.setSeckillId(seckillId);
@@ -149,7 +153,7 @@ public class UserServiceImpl implements UserService {
         seckillLogDO.setTime(new Date());
         seckillLogDO.setUserName(userModel.getName());
         //是否列入失信名单
-        if (screenRuleDO.getDishonest() > 0){
+        if (screenRuleModel.getDishonest() > 0){
             if (userModel.getDishonest() == 1){
                 seckillLogDO.setStatus(1);
                 seckillLogDO.setMsg("被列入失信名单");
@@ -159,8 +163,8 @@ public class UserServiceImpl implements UserService {
         }
 
         //年龄筛选
-        if (screenRuleDO.getMinAge() > 0){
-            if (screenRuleDO.getMinAge().intValue() > userModel.getAge().intValue()){
+        if (screenRuleModel.getMinAge() > 0){
+            if (screenRuleModel.getMinAge().intValue() > userModel.getAge().intValue()){
                 seckillLogDO.setStatus(1);
                 seckillLogDO.setMsg("用户年龄不符合");
                 seckillLogDOMapper.insertSelective(seckillLogDO);
@@ -169,7 +173,7 @@ public class UserServiceImpl implements UserService {
         }
 
         //工作状态筛选
-        if (screenRuleDO.getWorkState() > 0){
+        if (screenRuleModel.getWorkState() > 0){
             if ("失业".equals(userModel.getWorkState()) || "无业".equals(userModel.getWorkState())){
                 seckillLogDO.setStatus(1);
                 seckillLogDO.setMsg("工作状态不符合");
@@ -179,32 +183,32 @@ public class UserServiceImpl implements UserService {
         }
 
         //逾期记录删选
-        if (screenRuleDO.getBehindTimeNum() > 0){
+        if (screenRuleModel.getBehindTimeNum() > 0){
             //逾期记录次数
             int count = 0;
             List<OverdueRecordDO> overdueRecordDOS = userModel.getOverdueRecordDOS();
             for (OverdueRecordDO overdueRecordDO : overdueRecordDOS){
                 //有效时间段
-                Date valueTime = screenRuleDO.getValueTime();
-                Date recordTime = overdueRecordDO.getTime();
-                if (valueTime.after(recordTime)){
+                DateTime valueTime = screenRuleModel.getValueTime();
+                DateTime recordTime = new DateTime(overdueRecordDO.getTime());
+                if (valueTime.isAfter(recordTime)){
                     continue;
                 }
                 //逾期时间
-                if (screenRuleDO.getBehindTimeDay() > 0){
-                    if (overdueRecordDO.getBehindTimeDay() > screenRuleDO.getBehindTimeDay()){
+                if (screenRuleModel.getBehindTimeDay() > 0){
+                    if (overdueRecordDO.getBehindTimeDay() > screenRuleModel.getBehindTimeDay()){
                         count++;
                         continue;
                     }
                 }
                 //逾期金额
-                if (screenRuleDO.getBehindTimeMoney() > 0){
-                    if (overdueRecordDO.getBehindTimeMoney() > screenRuleDO.getBehindTimeMoney()){
+                if (screenRuleModel.getBehindTimeMoney() > 0){
+                    if (overdueRecordDO.getBehindTimeMoney() > screenRuleModel.getBehindTimeMoney()){
                         count++;
                         continue;
                     }
                 }
-                if (count >  screenRuleDO.getBehindTimeNum()){
+                if (count >  screenRuleModel.getBehindTimeNum()){
                     seckillLogDO.setStatus(1);
                     seckillLogDO.setMsg("逾期次数过多");
                     seckillLogDOMapper.insertSelective(seckillLogDO);
@@ -264,5 +268,15 @@ public class UserServiceImpl implements UserService {
         return userModel;
     }
 
+
+    private ScreenRuleModel convertFromScreenRuleDO(ScreenRuleDO screenRuleDO){
+        if (screenRuleDO == null){
+            return null;
+        }
+        ScreenRuleModel screenRuleModel = null;
+        BeanUtils.copyProperties(screenRuleDO,screenRuleModel);
+        screenRuleModel.setValueTime(new DateTime(screenRuleDO.getValueTime()));
+        return screenRuleModel;
+    }
 
 }

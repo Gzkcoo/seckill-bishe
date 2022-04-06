@@ -78,8 +78,6 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private RedisTemplate redisTemplate;
 
-
-
     @Override
     @Transactional
     public OrderModel createOrder(Integer userId, Integer productId, Integer amount,Integer seckillId,String stockLogId) throws BusinessException {

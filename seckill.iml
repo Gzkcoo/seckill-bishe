@@ -135,5 +135,8 @@
     <orderEntry type="library" name="Maven: org.springframework.plugin:spring-plugin-metadata:1.2.0.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.mapstruct:mapstruct:1.2.0.Final" level="project" />
     <orderEntry type="library" name="Maven: io.springfox:springfox-swagger-ui:2.9.2" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-websocket:2.5.5" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-messaging:5.3.10" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-websocket:5.3.10" level="project" />
   </component>
 </module>

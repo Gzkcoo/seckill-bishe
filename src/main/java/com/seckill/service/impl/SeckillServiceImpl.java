@@ -171,7 +171,7 @@ public class SeckillServiceImpl implements SeckillService {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
         }
         seckillDO.setEndTime(new Date());
-        seckillDOMapper.insertSelective(seckillDO);
+        seckillDOMapper.updateByPrimaryKeySelective(seckillDO);
 
         redisTemplate.delete("seckill_validate_id"+seckillId);
         redisTemplate.opsForValue().set("seckill_door_count_"+seckillId,0);

@@ -214,7 +214,6 @@ public class SeckillController {
     }
 
 
-
     private SeckillVO convertFromModel(SeckillModel seckillModel){
         if (seckillModel == null){
             return null;

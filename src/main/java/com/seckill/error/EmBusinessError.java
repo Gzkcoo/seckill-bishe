@@ -21,6 +21,7 @@ public enum EmBusinessError implements CommonError {
     HONEST_NOT_FIT(40002,"被列为失信名单"),
     WORKSTATE_NOT_FIT(40003,"工作状态不符合"),
     BEHINDTIME_NOT_FIT(40004,"逾期次数过多"),
+    SCREEN_NOT_ACTIVE(4005,"风控引擎未开启"),
     //5000开头为账户信息错误
     ACCOUNT_MONEY_ENOUGH(50001,"账户余额不足")
     ;

@@ -145,7 +145,9 @@ public class OrderController extends BaseController{
         }
 
         //用户初筛
-        //userService.userScreening(userModel,seckillId);
+        if (redisTemplate.hasKey("screen_active")){
+            userService.userScreening(userModel,seckillId);
+        }
 
         //获取秒杀访问令牌
         String seckillToken = seckillService.generateSeckillToken(seckillId,productId,userModel.getId());

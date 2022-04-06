@@ -5,6 +5,9 @@ import com.seckill.dataobject.ScreenRuleDO;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
 import com.seckill.service.ScreenService;
+import com.seckill.service.model.ScreenRuleModel;
+import org.joda.time.DateTime;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -33,8 +36,19 @@ public class ScreenServiceImpl implements ScreenService {
         }
 
         //将初筛规则设置到redis
-        redisTemplate.opsForValue().set("ScreenRule",screenRuleDO);
-
+        ScreenRuleModel screenRuleModel = this.convertFromScreenDO(screenRuleDO);
+        redisTemplate.opsForValue().set("ScreenRule",screenRuleModel);
         return true;
+    }
+
+    private ScreenRuleModel convertFromScreenDO(ScreenRuleDO screenRuleDO){
+
+        if (screenRuleDO == null){
+            return null;
+        }
+        ScreenRuleModel screenRuleModel = new ScreenRuleModel();
+        BeanUtils.copyProperties(screenRuleDO,screenRuleModel);
+        screenRuleModel.setValueTime(new DateTime(screenRuleDO.getValueTime()));
+        return screenRuleModel;
     }
 }
