@@ -36,7 +36,6 @@ public class TimeTask {
     public void sendMsgByUserId(){
         CopyOnWriteArraySet<WebSocket> webSocketSet = webSocket.getWebSocketSet();
         if( webSocketSet == null || webSocketSet.size() <= 0 ){
-            System.out.println("webSocketSet 为空.....");
             return;
         }
 

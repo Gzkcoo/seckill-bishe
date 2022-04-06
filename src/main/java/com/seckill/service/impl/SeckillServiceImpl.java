@@ -4,10 +4,8 @@ import com.seckill.controller.viewobject.SeckillVO;
 import com.seckill.dao.AnnounceDOMapper;
 import com.seckill.dao.ProductDOMapper;
 import com.seckill.dao.SeckillDOMapper;
-import com.seckill.dataobject.AnnounceDO;
-import com.seckill.dataobject.ProductDO;
-import com.seckill.dataobject.SeckillDO;
-import com.seckill.dataobject.StockDO;
+import com.seckill.dao.SeckillLogDOMapper;
+import com.seckill.dataobject.*;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
 import com.seckill.service.ProductService;
@@ -46,6 +44,9 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private SeckillLogDOMapper seckillLogDOMapper;
 
     @Autowired
     private AnnounceDOMapper announceDOMapper;
@@ -124,8 +125,21 @@ public class SeckillServiceImpl implements SeckillService {
             throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
         }
 
+        UserModel userModel = userService.getUserByIdInCache(userId);
+        if (userModel == null){
+            return null;
+        }
+
         //判断是否已经购买过此产品
         if (redisTemplate.hasKey("seckill_"+seckillId+"_user_"+userId)){
+            SeckillLogDO seckillLogDO = new SeckillLogDO();
+            seckillLogDO.setSeckillId(seckillId);
+            seckillLogDO.setUserId(userModel.getId());
+            seckillLogDO.setTime(new Date());
+            seckillLogDO.setUserName(userModel.getName());
+            seckillLogDO.setStatus(1);
+            seckillLogDO.setMsg("不可重复购买");
+            seckillLogDOMapper.insertSelective(seckillLogDO);
             throw new BusinessException(EmBusinessError.USER_HAD_BOUGHT);
         }
 
@@ -151,10 +165,6 @@ public class SeckillServiceImpl implements SeckillService {
             return null;
         }
 
-        UserModel userModel = userService.getUserByIdInCache(userId);
-        if (userModel == null){
-            return null;
-        }
 
         //获取秒杀大闸的count数量
         long result = redisTemplate.opsForValue().increment("seckill_door_count_"+seckillId,-1);

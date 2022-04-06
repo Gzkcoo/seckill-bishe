@@ -1,8 +1,10 @@
 package com.seckill.controller;
 
 import com.seckill.controller.viewobject.SeckillVO;
+import com.seckill.dao.SeckillLogDOMapper;
 import com.seckill.dataobject.ProductDO;
 import com.seckill.dataobject.SeckillDO;
+import com.seckill.dataobject.SeckillLogDO;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
 import com.seckill.response.CommonReturnType;
@@ -18,6 +20,7 @@ import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.units.qual.A;
 import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +55,9 @@ public class SeckillController {
 
     @Autowired
     private CacheService cacheService;
+
+    @Autowired
+    private SeckillLogDOMapper seckillLogDOMapper;
 
     //获取秒杀活动详情
     @ApiOperation("获取秒杀活动详情")
@@ -211,6 +217,19 @@ public class SeckillController {
     public CommonReturnType getOffSeckill(@RequestParam(name = "seckillId") Integer seckillId) throws BusinessException {
         seckillService.getOffSeckillById(seckillId);
         return CommonReturnType.create(null);
+    }
+
+    //查看秒杀活动的日志
+    @ApiOperation("查看秒杀活动的日志")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
+                    dataType = "int"),
+    })
+    @RequestMapping(value = "/getlog",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @ResponseBody
+    public CommonReturnType getSeckillLog(@RequestParam(name = "seckillId") Integer seckillId) throws BusinessException {
+        List<SeckillLogDO> list = seckillLogDOMapper.selectBySeckillId(seckillId);
+        return CommonReturnType.create(list);
     }
 
 

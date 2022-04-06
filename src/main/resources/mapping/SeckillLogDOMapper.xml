@@ -154,4 +154,10 @@
       msg = #{msg,jdbcType=VARCHAR}
     where id = #{id,jdbcType=INTEGER}
   </update>
+  <select id="selectBySeckillId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from seckill_log
+    where seckill_id = #{seckillId}
+  </select>
 </mapper>
