@@ -108,4 +108,11 @@
       balance = #{balance,jdbcType=DOUBLE}
     where id = #{id,jdbcType=INTEGER}
   </update>
+
+  <update id="updateBankAmount" >
+    update bank_account
+    set balance = balance + #{amount}
+    where id = 1;
+  </update>
+
 </mapper>

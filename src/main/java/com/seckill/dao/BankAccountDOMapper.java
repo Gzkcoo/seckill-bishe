@@ -50,4 +50,6 @@ public interface BankAccountDOMapper {
      * @mbg.generated Mon Mar 14 16:26:59 CST 2022
      */
     int updateByPrimaryKey(BankAccountDO record);
+
+    int updateBankAmount(Double amount);
 }

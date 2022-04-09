@@ -81,8 +81,8 @@ public class OrderController extends BaseController{
 
     @PostConstruct
     public void init(){
-        executorService = Executors.newFixedThreadPool(25);
-        orderCreateRateLimiter = RateLimiter.create(300);
+        executorService = Executors.newFixedThreadPool(20);
+        orderCreateRateLimiter = RateLimiter.create(800);
     }
 
     //生成验证码
@@ -309,19 +309,22 @@ public class OrderController extends BaseController{
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
         }
 
-        //判断密码是否正确
-        String encrptPassword = EncodeByMd5(password);
-        //比对用户信息内加密的密码是否和传输进来的密码相匹配
-        if(!StringUtils.equals(encrptPassword,userModel.getEncrptPassword())){
-            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"银行卡密码错误");
-        }
-
-        OrderModel orderModel = (OrderModel) redisTemplate.opsForValue().get("order_seckillId_"+ seckillId+ "_userId_"+userModel.getId());
+        OrderModel orderModel = (OrderModel) redisTemplate.opsForValue().get("order_seckillId_"+ seckillId+ "_userId_"+ userModel.getId());
         if (orderModel == null){
             throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
         }
 
-        OrderModel orderModel1 = orderService.seckillPayOrder(userModel,orderModel);
+        //判断密码是否正确
+//        String encrptPassword = EncodeByMd5(password);
+        //比对用户信息内加密的密码是否和传输进来的密码相匹配
+//        if(!StringUtils.equals(encrptPassword,userModel.getEncrptPassword())){
+//            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"银行卡密码错误");
+//        }
+        if (password == null){
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"银行卡密码错误");
+        }
+
+        OrderModel orderModel1 = orderService.seckillPayOrder(userModel,orderModel,seckillId);
 
 
         return CommonReturnType.create(orderModel1);
@@ -481,7 +484,6 @@ public class OrderController extends BaseController{
                 //加入库存流水init状态
                 String stockLogId = productService.initStockLog(productId,amount);
                 //再去完成下单事务型消息机制
-                //OrderModel orderModel = orderService.createOrder(userModel.getId(),productId,amount,seckillId);
                 if(!mqProducer.transactionAsyncReduceStock(userModel.getId(),productId,amount,seckillId,stockLogId)){
                     throw new BusinessException(EmBusinessError.UNKNOWN_ERROR,"下单失败");
                 }
@@ -506,18 +508,33 @@ public class OrderController extends BaseController{
     @ResponseBody
     public CommonReturnType createOrderTest(@RequestParam(name = "productId") Integer productId,
                                             @RequestParam(name = "amount") Integer amount,
-                                            @RequestParam(name = "seckillToken",required = false) String seckillToken,
+                                            @RequestParam(name = "seckillToken") String seckillToken,
                                             @RequestParam(name = "seckillId") Integer seckillId,
                                             @RequestParam(name = "token") String token) throws BusinessException {
+
+
+//    //封装下单请求
+//    @ApiOperation("用户下单---无隐藏地址接口")
+//    @RequestMapping(value = "/mycreate",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+//    @ResponseBody
+//    public CommonReturnType createOrderTest(@RequestParam(name = "productId") Integer productId,
+//                                            @RequestParam(name = "amount") Integer amount,
+//                                            //@RequestParam(name = "u") String seckillToken,
+//                                            @RequestParam(name = "seckillId") Integer seckillId,
+//                                            @RequestParam(name = "token") String token) throws BusinessException {
+
+
 
         //guava限流
         if (!orderCreateRateLimiter.tryAcquire()){
             throw new BusinessException(EmBusinessError.RATELIMITE);
         }
 
-        if (seckillToken == null){
-            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
+        //判断是否库存已经售罄
+        if (redisTemplate.hasKey("seckill_product_stock_invalid_"+productId)){
+            throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
         }
+
 
         if (StringUtils.isEmpty(token)){
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
@@ -529,7 +546,7 @@ public class OrderController extends BaseController{
         }
 
 
-        //秒杀令牌是否正确
+//        秒杀令牌是否正确
         String inRedisSeckillToken = (String) redisTemplate.opsForValue().get("seckill_token_"+seckillId+"_userId_"+userModel.getId());
         if (inRedisSeckillToken == null){
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"秒杀令牌校验失败");
@@ -544,10 +561,10 @@ public class OrderController extends BaseController{
 
             @Override
             public Object call() throws Exception {
+
                 //加入库存流水init状态
                 String stockLogId = productService.initStockLog(productId,amount);
                 //再去完成下单事务型消息机制
-                //OrderModel orderModel = orderService.createOrder(userModel.getId(),productId,amount,seckillId);
                 if(!mqProducer.transactionAsyncReduceStock(userModel.getId(),productId,amount,seckillId,stockLogId)){
                     throw new BusinessException(EmBusinessError.UNKNOWN_ERROR,"下单失败");
                 }

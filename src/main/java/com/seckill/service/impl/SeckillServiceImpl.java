@@ -114,7 +114,7 @@ public class SeckillServiceImpl implements SeckillService {
         redisTemplate.opsForValue().set("seckill_product_stock_"+productModel.getId(),productModel.getStock());
 
         //将大闸的限制数字设到redis内
-        redisTemplate.opsForValue().set("seckill_door_count_"+id,productModel.getStock() * 5);
+        redisTemplate.opsForValue().set("seckill_door_count_"+id,productModel.getStock() * 3);
     }
 
     @Override
@@ -161,9 +161,9 @@ public class SeckillServiceImpl implements SeckillService {
             return null;
         }
         //判断秒杀活动和商品id是否对应
-        if (seckillModel.getProductId().intValue() != productId.intValue()){
-            return null;
-        }
+//        if (seckillModel.getProductId().intValue() != productId.intValue()){
+//            return null;
+//        }
 
 
         //获取秒杀大闸的count数量

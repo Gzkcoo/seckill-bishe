@@ -18,8 +18,6 @@ import org.springframework.stereotype.Component;
 @EnableRedisHttpSession(maxInactiveIntervalInSeconds = 3600)
 public class RedisConfig {
 
-
-
     @Bean
     public RedisTemplate redisTemplate(RedisConnectionFactory redisConnectionFactory){
         RedisTemplate redisTemplate = new RedisTemplate();

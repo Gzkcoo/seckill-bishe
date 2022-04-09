@@ -219,13 +219,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderModel seckillPayOrder(UserModel userModel, OrderModel orderModel) throws BusinessException {
+    public OrderModel seckillPayOrder(UserModel userModel, OrderModel orderModel,Integer seckillId) throws BusinessException {
         //判断账户余额是否满足
         List<AccountDO> accountDOS = userModel.getAccountDOS();
         AccountDO accountDO = accountDOS.get(0);
         if (accountDO.getAvailableBalance() >= orderModel.getPayMoney() ){
             accountDO.setAvailableBalance(accountDO.getAvailableBalance()-orderModel.getPayMoney());
-            accountDO.setAllExpend(orderModel.getPayMoney());
+            accountDO.setAllExpend(accountDO.getAllExpend()+orderModel.getPayMoney());
             //更新账户余额
             accountDOMapper.updateByPrimaryKeySelective(accountDO);
         }else {
@@ -233,9 +233,11 @@ public class OrderServiceImpl implements OrderService {
         }
 
         //更新银行账户
-        BankAccountDO bankAccountDO = bankAccountDOMapper.selectByPrimaryKey(1);
-        bankAccountDO.setBalance(bankAccountDO.getBalance() + orderModel.getPayMoney());
-        bankAccountDOMapper.updateByPrimaryKeySelective(bankAccountDO);
+//        BankAccountDO bankAccountDO = bankAccountDOMapper.selectByPrimaryKey(1);
+//        bankAccountDO.setBalance(bankAccountDO.getBalance() + orderModel.getPayMoney());
+//
+        bankAccountDOMapper.updateBankAmount(orderModel.getPayMoney());
+
 
         //更新销量
         //SeckillDO seckillDO = seckillDOMapper.selectByPrimaryKey(orderModel.getSeckillId());
@@ -258,8 +260,11 @@ public class OrderServiceImpl implements OrderService {
         OrderDO orderDO = this.convertFromOrderModel(orderModel);
         orderDOMapper.updateByPrimaryKeySelective(orderDO);
 
-        redisTemplate.delete("ex_orderId_"+orderModel.getId());
-        redisTemplate.delete("ex_orderId_"+orderModel.getId()+"_1");
+        redisTemplate.delete("order_seckillId_"+ seckillId+ "_userId_"+userModel.getId());
+
+
+//        redisTemplate.delete("ex_orderId_"+orderModel.getId());
+//        redisTemplate.delete("ex_orderId_"+orderModel.getId()+"_1");
 
         return orderModel;
     }

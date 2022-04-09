@@ -22,6 +22,7 @@ public class WebServerConfiguration implements WebServerFactoryCustomizer<Config
                 //定制化keepalivetimeout,设置30秒内没有请求则服务端自动断开keepalive链接
                 protocol.setKeepAliveTimeout(30000);
                 //当客户端发送超过10000个请求则自动断开keepalive链接
+//                protocol.setMaxKeepAliveRequests(10000);
                 protocol.setMaxKeepAliveRequests(10000);
             }
         });

@@ -202,7 +202,7 @@ public class SeckillController {
         SeckillModel seckillModel = seckillService.getSeckillByIdInCache(seckillId);
         ProductModel productModel = seckillModel.getProductModel();
         //将大闸的限制数字设到redis内
-        redisTemplate.opsForValue().set("seckill_door_count_"+seckillId,productModel.getStock() * 5);
+        redisTemplate.opsForValue().set("seckill_door_count_"+seckillId,productModel.getStock() * 3);
 
         redisTemplate.delete("seckill_product_stock_"+productModel.getId());
         redisTemplate.opsForValue().set("seckill_product_stock_"+productModel.getId(),productModel.getStock());
