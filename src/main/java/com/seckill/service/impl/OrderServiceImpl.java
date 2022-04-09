@@ -148,6 +148,8 @@ public class OrderServiceImpl implements OrderService {
     public OrderModel payOrder(UserModel userModel,String orderId, String accountId) throws BusinessException {
 
         OrderDO orderDO = orderDOMapper.selectByPrimaryKey(orderId);
+        //OrderModel orderModel = (OrderModel) redisTemplate.opsForValue().get("order_seckillId_"+ seckillId+ "_userId_"+userModel.getId());
+
         if (orderDO == null){
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
         }
@@ -156,25 +158,33 @@ public class OrderServiceImpl implements OrderService {
         }
 
         //判断账户余额是否满足
-        Boolean flag = false;
         List<AccountDO> accountDOS = userModel.getAccountDOS();
-        for (AccountDO accountDO : accountDOS){
-            if (StringUtils.equals(accountId,accountDO.getId())){
-                if (accountDO.getAvailableBalance() >= orderDO.getPayMoney() ){
-                    accountDO.setAvailableBalance(accountDO.getAvailableBalance()-orderDO.getPayMoney());
-                    accountDO.setAllExpend(orderDO.getPayMoney());
-                    //更新账户余额
-                    accountDOMapper.updateByPrimaryKeySelective(accountDO);
-                    flag = true;
-                    break;
-                }else {
-                    throw new BusinessException(EmBusinessError.ACCOUNT_MONEY_ENOUGH);
-                }
-            }
+        AccountDO accountDO = accountDOS.get(0);
+        if (accountDO.getAvailableBalance() >= orderDO.getPayMoney() ){
+            accountDO.setAvailableBalance(accountDO.getAvailableBalance()-orderDO.getPayMoney());
+            accountDO.setAllExpend(orderDO.getPayMoney());
+            //更新账户余额
+            accountDOMapper.updateByPrimaryKeySelective(accountDO);
+        }else {
+            throw new BusinessException(EmBusinessError.ACCOUNT_MONEY_ENOUGH);
         }
-        if (!flag){
-            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
-        }
+//        for (AccountDO accountDO : accountDOS){
+//            if (StringUtils.equals(accountId,accountDO.getId())){
+//                if (accountDO.getAvailableBalance() >= orderDO.getPayMoney() ){
+//                    accountDO.setAvailableBalance(accountDO.getAvailableBalance()-orderDO.getPayMoney());
+//                    accountDO.setAllExpend(orderDO.getPayMoney());
+//                    //更新账户余额
+//                    accountDOMapper.updateByPrimaryKeySelective(accountDO);
+//                    flag = true;
+//                    break;
+//                }else {
+//                    throw new BusinessException(EmBusinessError.ACCOUNT_MONEY_ENOUGH);
+//                }
+//            }
+//        }
+//        if (!flag){
+//            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
+//        }
 
         //更新银行账户
         BankAccountDO bankAccountDO = bankAccountDOMapper.selectByPrimaryKey(1);
@@ -187,7 +197,7 @@ public class OrderServiceImpl implements OrderService {
 
         //更新账户流水信息
         AccountFlowDO accountFlowDO = new AccountFlowDO();
-        accountFlowDO.setAccountId(accountId);
+        accountFlowDO.setAccountId(accountDO.getId());
         accountFlowDO.setId(UUID.randomUUID().toString().replace("-",""));
         accountFlowDO.setTime(new Date());
         accountFlowDO.setChangeMoney(-1 * orderDO.getPayMoney());
@@ -200,6 +210,53 @@ public class OrderServiceImpl implements OrderService {
         orderDOMapper.updateByPrimaryKeySelective(orderDO);
 
         OrderModel orderModel = this.convertFromOrderDO(orderDO);
+
+        redisTemplate.delete("ex_orderId_"+orderModel.getId());
+        redisTemplate.delete("ex_orderId_"+orderModel.getId()+"_1");
+
+        return orderModel;
+    }
+
+    @Override
+    @Transactional
+    public OrderModel seckillPayOrder(UserModel userModel, OrderModel orderModel) throws BusinessException {
+        //判断账户余额是否满足
+        List<AccountDO> accountDOS = userModel.getAccountDOS();
+        AccountDO accountDO = accountDOS.get(0);
+        if (accountDO.getAvailableBalance() >= orderModel.getPayMoney() ){
+            accountDO.setAvailableBalance(accountDO.getAvailableBalance()-orderModel.getPayMoney());
+            accountDO.setAllExpend(orderModel.getPayMoney());
+            //更新账户余额
+            accountDOMapper.updateByPrimaryKeySelective(accountDO);
+        }else {
+            throw new BusinessException(EmBusinessError.ACCOUNT_MONEY_ENOUGH);
+        }
+
+        //更新银行账户
+        BankAccountDO bankAccountDO = bankAccountDOMapper.selectByPrimaryKey(1);
+        bankAccountDO.setBalance(bankAccountDO.getBalance() + orderModel.getPayMoney());
+        bankAccountDOMapper.updateByPrimaryKeySelective(bankAccountDO);
+
+        //更新销量
+        //SeckillDO seckillDO = seckillDOMapper.selectByPrimaryKey(orderModel.getSeckillId());
+        //productService.increaseSales(seckillDO.getProductId(),orderModel.getAmount());
+
+        //更新账户流水信息
+        AccountFlowDO accountFlowDO = new AccountFlowDO();
+        accountFlowDO.setAccountId(accountDO.getId());
+        accountFlowDO.setId(UUID.randomUUID().toString().replace("-",""));
+        accountFlowDO.setTime(new Date());
+        accountFlowDO.setChangeMoney(-1 * orderModel.getPayMoney());
+        //accountFlowDO.setMsg("支付秒杀活动:"+seckillDO.getName());
+        accountFlowDO.setMsg("支付秒杀活动");
+        accountFlowDOMapper.insertSelective(accountFlowDO);
+
+        //更新订单状态
+        orderModel.setPayTime(new Date());
+        orderModel.setStatus(2);
+
+        OrderDO orderDO = this.convertFromOrderModel(orderModel);
+        orderDOMapper.updateByPrimaryKeySelective(orderDO);
 
         redisTemplate.delete("ex_orderId_"+orderModel.getId());
         redisTemplate.delete("ex_orderId_"+orderModel.getId()+"_1");

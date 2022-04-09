@@ -1,10 +1,9 @@
 package com.seckill.controller;
 
 import com.google.common.util.concurrent.RateLimiter;
+import com.seckill.dao.AccountDOMapper;
 import com.seckill.dao.OrderDOMapper;
-import com.seckill.dataobject.AccountDO;
-import com.seckill.dataobject.OrderDO;
-import com.seckill.dataobject.OverdueRecordDO;
+import com.seckill.dataobject.*;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
 import com.seckill.mq.MqProducer;
@@ -36,8 +35,10 @@ import java.awt.image.RenderedImage;
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 @Api("订单相关api")
@@ -65,6 +66,9 @@ public class OrderController extends BaseController{
     private MqProducer mqProducer;
 
     @Autowired
+    private AccountDOMapper accountDOMapper;
+
+    @Autowired
     private OrderDOMapper orderDOMapper;
 
     @Autowired
@@ -77,7 +81,7 @@ public class OrderController extends BaseController{
 
     @PostConstruct
     public void init(){
-        executorService = Executors.newFixedThreadPool(20);
+        executorService = Executors.newFixedThreadPool(25);
         orderCreateRateLimiter = RateLimiter.create(300);
     }
 
@@ -158,6 +162,47 @@ public class OrderController extends BaseController{
         return CommonReturnType.create(seckillToken);
     }
 
+
+
+    //获得秒杀令牌
+    @ApiOperation("生成秒杀令牌--无需验证码削峰")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "productId", value = "商品id", required = true,
+                    dataType = "int"),
+            @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
+                    dataType = "int"),
+            @ApiImplicitParam(name = "token", value = "已登录用户唯一id", required = true,
+                    dataType = "String")
+    })
+    @RequestMapping(value = "/mygeneratetoken",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @ResponseBody
+    public CommonReturnType mygenerateToken(@RequestParam(name = "productId") Integer productId,
+                                          @RequestParam(name = "seckillId") Integer seckillId,
+                                          @RequestParam(name = "token") String token) throws BusinessException {
+
+        if (StringUtils.isEmpty(token)){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
+        if (userModel == null){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        //用户初筛
+        if (redisTemplate.hasKey("screen_active")){
+            userService.userScreening(userModel,seckillId);
+        }
+
+        //获取秒杀访问令牌
+        String seckillToken = seckillService.generateSeckillToken(seckillId,productId,userModel.getId());
+        if (seckillToken == null){
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"生成令牌失败");
+        }
+
+        return CommonReturnType.create(seckillToken);
+    }
+
     //取消订单
     @ApiOperation("取消订单")
     @ApiImplicitParams({
@@ -166,7 +211,7 @@ public class OrderController extends BaseController{
             @ApiImplicitParam(name = "orderId", value = "订单编号", required = true,
                     dataType = "string")
     })
-    @RequestMapping(value = "cancel",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @RequestMapping(value = "/cancel",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType cancelOrder(@RequestParam(name = "token")String token,
                                         @RequestParam(name = "orderId")String orderId) throws BusinessException {
@@ -196,7 +241,7 @@ public class OrderController extends BaseController{
     }
 
     //支付接口
-    @ApiOperation("支付接口")
+    @ApiOperation("普通支付接口")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "orderId", value = "订单编号", required = true,
                     dataType = "string"),
@@ -207,7 +252,7 @@ public class OrderController extends BaseController{
             @ApiImplicitParam(name = "token", value = "已登录用户唯一id", required = true,
                     dataType = "string")
     })
-    @RequestMapping(value = "pay",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @RequestMapping(value = "/pay",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType payOrder(@RequestParam(name = "orderId") String orderId,
                                      @RequestParam(name = "accountId") String accountId,
@@ -236,6 +281,52 @@ public class OrderController extends BaseController{
         return CommonReturnType.create(orderModel);
     }
 
+
+
+    //支付接口
+    @ApiOperation("秒杀支付接口")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
+                    dataType = "int"),
+            @ApiImplicitParam(name = "password", value = "用户密码", required = true,
+                    dataType = "string"),
+            @ApiImplicitParam(name = "token", value = "已登录用户唯一id", required = true,
+                    dataType = "string")
+    })
+    @RequestMapping(value = "/seckillpay",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @ResponseBody
+    public CommonReturnType seckillPayOrder(@RequestParam(name = "seckillId") Integer seckillId,
+                                     @RequestParam(name = "password" ) String password,
+                                     @RequestParam(name = "token") String token) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+
+
+        if (StringUtils.isEmpty(token)){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
+        if (userModel == null){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        //判断密码是否正确
+        String encrptPassword = EncodeByMd5(password);
+        //比对用户信息内加密的密码是否和传输进来的密码相匹配
+        if(!StringUtils.equals(encrptPassword,userModel.getEncrptPassword())){
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"银行卡密码错误");
+        }
+
+        OrderModel orderModel = (OrderModel) redisTemplate.opsForValue().get("order_seckillId_"+ seckillId+ "_userId_"+userModel.getId());
+        if (orderModel == null){
+            throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
+        }
+
+        OrderModel orderModel1 = orderService.seckillPayOrder(userModel,orderModel);
+
+
+        return CommonReturnType.create(orderModel1);
+    }
+
     //查看个人历史订单
     @ApiOperation("查看个人历史订单")
     @ApiImplicitParams({
@@ -262,6 +353,39 @@ public class OrderController extends BaseController{
 
 
     //普通商品下单
+    @ApiOperation("获取某个秒杀活动的订单")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
+                    dataType = "int"),
+            @ApiImplicitParam(name = "token", value = "已登录用户唯一id", required = true,
+                    dataType = "String")
+    })
+    @RequestMapping(value = "/getorder",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @ResponseBody
+    public CommonReturnType getOrder(@RequestParam(name = "seckillId") Integer seckillId,
+                                        @RequestParam(name = "token") String token) throws BusinessException {
+
+
+        if (StringUtils.isEmpty(token)){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
+        if (userModel == null){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        String orderId = (String) redisTemplate.opsForValue().get("order_seckillId_"+ seckillId+ "_userId_"+userModel.getId());
+
+        //OrderModel orderModel = (OrderModel) redisTemplate.opsForValue().get("order_seckillId_"+ seckillId+ "_userId_"+userModel.getId());
+
+        if (orderId == null){
+            return CommonReturnType.create(null);
+        }
+        return CommonReturnType.create(orderId);
+    }
+
+
     @ApiOperation("普通商品下单")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "productId", value = "产品id", required = true,
@@ -312,7 +436,7 @@ public class OrderController extends BaseController{
     public CommonReturnType createOrder(@PathVariable(name = "path") String path,
                                         @RequestParam(name = "productId") Integer productId,
                                         @RequestParam(name = "amount") Integer amount,
-                                        @RequestParam(name = "seckillToken",required = false) String seckillToken,
+                                        @RequestParam(name = "seckillToken") String seckillToken,
                                         @RequestParam(name = "seckillId") Integer seckillId,
                                         @RequestParam(name = "token") String token) throws BusinessException {
 
@@ -376,13 +500,13 @@ public class OrderController extends BaseController{
         return CommonReturnType.create(null);
     }
 
-
     //封装下单请求
-    @ApiOperation("用户下单---测试接口")
-    @RequestMapping(value = "/test/create",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @ApiOperation("用户下单---无隐藏地址接口")
+    @RequestMapping(value = "/mycreate",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType createOrderTest(@RequestParam(name = "productId") Integer productId,
                                             @RequestParam(name = "amount") Integer amount,
+                                            @RequestParam(name = "seckillToken",required = false) String seckillToken,
                                             @RequestParam(name = "seckillId") Integer seckillId,
                                             @RequestParam(name = "token") String token) throws BusinessException {
 
@@ -391,8 +515,8 @@ public class OrderController extends BaseController{
             throw new BusinessException(EmBusinessError.RATELIMITE);
         }
 
-        if (redisTemplate.hasKey("seckill_product_stock_invalid_"+productId)){
-            throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
+        if (seckillToken == null){
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
         }
 
         if (StringUtils.isEmpty(token)){
@@ -404,6 +528,15 @@ public class OrderController extends BaseController{
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
         }
 
+
+        //秒杀令牌是否正确
+        String inRedisSeckillToken = (String) redisTemplate.opsForValue().get("seckill_token_"+seckillId+"_userId_"+userModel.getId());
+        if (inRedisSeckillToken == null){
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"秒杀令牌校验失败");
+        }
+        if (!org.apache.commons.lang3.StringUtils.equals(inRedisSeckillToken,seckillToken)){
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"秒杀令牌校验失败");
+        }
 
         //同步调用线程池的submit方法
         //拥塞窗口为20的等待队列，用来队列化泄洪

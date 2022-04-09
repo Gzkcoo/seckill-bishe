@@ -20,6 +20,9 @@ public interface OrderService {
     //支付接口
     OrderModel payOrder(UserModel userModel,String orderId, String accountId) throws BusinessException;
 
+    //支付接口
+    OrderModel seckillPayOrder(UserModel userModel,OrderModel orderId) throws BusinessException;
+
     //查询用户个人订单
     List<OrderModel> selectOrderListByUserId(Integer userId);
 

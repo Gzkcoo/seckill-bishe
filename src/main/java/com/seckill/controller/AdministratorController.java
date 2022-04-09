@@ -7,7 +7,6 @@ import com.seckill.service.ManagerService;
 import com.seckill.service.model.ManagerModel;
 import com.seckill.service.model.UserModel;
 import com.seckill.socket.WebSocket;
-import com.seckill.timer.TimeTask;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -16,8 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 @Api("administrator相关api")

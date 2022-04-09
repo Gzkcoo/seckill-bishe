@@ -214,7 +214,6 @@ public class UserServiceImpl implements UserService {
                     seckillLogDOMapper.insertSelective(seckillLogDO);
                     throw new BusinessException(EmBusinessError.BEHINDTIME_NOT_FIT);
                 }
-
             }
         }
         return true;

@@ -190,7 +190,7 @@ public class SeckillController {
     }
 
     //发布秒杀活动
-    @ApiOperation("发布秒杀活动------测试接口")
+    @ApiOperation("发布秒杀活动------测试：根据已有的秒杀活动发布，在缓存中预热")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
                     dataType = "int"),
@@ -201,6 +201,9 @@ public class SeckillController {
 
         SeckillModel seckillModel = seckillService.getSeckillByIdInCache(seckillId);
         ProductModel productModel = seckillModel.getProductModel();
+        //将大闸的限制数字设到redis内
+        redisTemplate.opsForValue().set("seckill_door_count_"+seckillId,productModel.getStock() * 5);
+
         redisTemplate.delete("seckill_product_stock_"+productModel.getId());
         redisTemplate.opsForValue().set("seckill_product_stock_"+productModel.getId(),productModel.getStock());
         return CommonReturnType.create(null);
