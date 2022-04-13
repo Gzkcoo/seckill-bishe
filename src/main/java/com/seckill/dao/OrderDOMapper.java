@@ -54,4 +54,6 @@ public interface OrderDOMapper {
     int updateByPrimaryKey(OrderDO record);
 
     List<OrderDO> selectByUserId(Integer userId);
+
+    List<OrderDO> selectBySeckillId(Integer seckillId);
 }

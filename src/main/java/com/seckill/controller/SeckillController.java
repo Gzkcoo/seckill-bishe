@@ -1,10 +1,14 @@
 package com.seckill.controller;
 
+import com.seckill.controller.viewobject.SeckillLogVO;
 import com.seckill.controller.viewobject.SeckillVO;
+import com.seckill.dao.SeckillDOMapper;
 import com.seckill.dao.SeckillLogDOMapper;
+import com.seckill.dao.UserDOMapper;
 import com.seckill.dataobject.ProductDO;
 import com.seckill.dataobject.SeckillDO;
 import com.seckill.dataobject.SeckillLogDO;
+import com.seckill.dataobject.UserDO;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
 import com.seckill.response.CommonReturnType;
@@ -32,6 +36,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -58,6 +63,12 @@ public class SeckillController {
 
     @Autowired
     private SeckillLogDOMapper seckillLogDOMapper;
+
+    @Autowired
+    private SeckillDOMapper seckillDOMapper;
+
+    @Autowired
+    private UserDOMapper userDOMapper;
 
     //获取秒杀活动详情
     @ApiOperation("获取秒杀活动详情")
@@ -203,7 +214,8 @@ public class SeckillController {
         ProductModel productModel = seckillModel.getProductModel();
         //将大闸的限制数字设到redis内
         redisTemplate.opsForValue().set("seckill_door_count_"+seckillId,productModel.getStock() * 3);
-
+        //删除售罄标识
+        redisTemplate.delete("seckill_product_stock_invalid_"+productModel.getId());
         redisTemplate.delete("seckill_product_stock_"+productModel.getId());
         redisTemplate.opsForValue().set("seckill_product_stock_"+productModel.getId(),productModel.getStock());
         return CommonReturnType.create(null);
@@ -223,16 +235,46 @@ public class SeckillController {
     }
 
     //查看秒杀活动的日志
-    @ApiOperation("查看秒杀活动的日志")
+    @ApiOperation("查看秒杀活动被初筛的日志")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
                     dataType = "int"),
     })
-    @RequestMapping(value = "/getlog",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @RequestMapping(value = "/getfaillog",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType getSeckillLog(@RequestParam(name = "seckillId") Integer seckillId) throws BusinessException {
+
         List<SeckillLogDO> list = seckillLogDOMapper.selectBySeckillId(seckillId);
-        return CommonReturnType.create(list);
+        List<SeckillLogVO> logVOS = new ArrayList<>();
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        for (SeckillLogDO logDO : list){
+            SeckillLogVO seckillLogVO = new SeckillLogVO();
+            seckillLogVO.setSeckillId(seckillId);
+            seckillLogVO.setSeckillName(seckillDOMapper.selectByPrimaryKey(seckillId).getName());
+            seckillLogVO.setMsg(logDO.getMsg());
+            seckillLogVO.setSeckillTime(simpleDateFormat.format(logDO.getTime()));
+            UserDO userDO = userDOMapper.selectByPrimaryKey(logDO.getUserId());
+            seckillLogVO.setUserId(userDO.getId());
+            seckillLogVO.setUserName(userDO.getName());
+            seckillLogVO.setPhone(userDO.getPhone());
+            logVOS.add(seckillLogVO);
+        }
+
+        return CommonReturnType.create(logVOS);
+    }
+
+    //查看秒杀活动的日志
+    @ApiOperation("查看秒杀活动成功下单的日志")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "seckillId", value = "秒杀活动id", required = true,
+                    dataType = "int"),
+    })
+    @RequestMapping(value = "/getlogsuccess",method = {RequestMethod.GET})
+    @ResponseBody
+    public CommonReturnType getSeckillLogSuccess(@RequestParam(name = "seckillId") Integer seckillId) throws BusinessException {
+        List<SeckillLogVO> seckillLogSuccess = seckillService.getSeckillLogSuccess(seckillId);
+        return CommonReturnType.create(seckillLogSuccess);
     }
 
 
@@ -246,5 +288,12 @@ public class SeckillController {
         seckillVO.setEndTime(seckillModel.getEndTime().toString(DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")));
         return seckillVO;
     }
+
+
+
+
+
+
+
 
 }

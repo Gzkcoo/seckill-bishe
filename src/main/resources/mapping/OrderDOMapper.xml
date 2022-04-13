@@ -185,4 +185,11 @@
     from order_info
     where user_id = #{userId}
   </select>
+
+  <select id="selectBySeckillId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from order_info
+    where seckill_id = #{seckillId}
+  </select>
 </mapper>

@@ -1,6 +1,8 @@
 package com.seckill.service;
 
+import com.seckill.controller.viewobject.SeckillLogVO;
 import com.seckill.dataobject.SeckillDO;
+import com.seckill.dataobject.SeckillLogDO;
 import com.seckill.error.BusinessException;
 import com.seckill.service.model.SeckillModel;
 import com.seckill.service.model.UserModel;
@@ -28,6 +30,9 @@ public interface SeckillService {
 
     //订阅秒杀提醒
     void subscribeSeckill(UserModel userModel, Integer seckillId);
+
+    //成功下单秒杀活动日志
+    List<SeckillLogVO> getSeckillLogSuccess(Integer seckillId);
 
 
 }

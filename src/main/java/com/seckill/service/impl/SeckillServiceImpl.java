@@ -1,10 +1,8 @@
 package com.seckill.service.impl;
 
+import com.seckill.controller.viewobject.SeckillLogVO;
 import com.seckill.controller.viewobject.SeckillVO;
-import com.seckill.dao.AnnounceDOMapper;
-import com.seckill.dao.ProductDOMapper;
-import com.seckill.dao.SeckillDOMapper;
-import com.seckill.dao.SeckillLogDOMapper;
+import com.seckill.dao.*;
 import com.seckill.dataobject.*;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
@@ -24,6 +22,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -50,6 +50,12 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
     private AnnounceDOMapper announceDOMapper;
+
+    @Autowired
+    private OrderDOMapper orderDOMapper;
+
+    @Autowired
+    private UserDOMapper userDOMapper;
 
     @Override
     public SeckillModel getSeckillModel(Integer id) {
@@ -206,7 +212,27 @@ public class SeckillServiceImpl implements SeckillService {
         announceDO.setContent("您订阅的"+ seckillDO.getName() +"秒杀活动将要开始啦");
         announceDO.setUserId(userModel.getId());
         announceDOMapper.insertSelective(announceDO);
+    }
 
+    @Override
+    public List<SeckillLogVO> getSeckillLogSuccess(Integer seckillId) {
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        List<OrderDO> list = orderDOMapper.selectBySeckillId(seckillId);
+        List<SeckillLogVO> seckillLogVOS = new ArrayList<>();
+        for (OrderDO orderDO : list){
+            SeckillLogVO seckillLogVO = new SeckillLogVO();
+            seckillLogVO.setSeckillId(seckillId);
+            seckillLogVO.setSeckillName(seckillDOMapper.selectByPrimaryKey(seckillId).getName());
+            seckillLogVO.setMsg("秒杀下单成功");
+            seckillLogVO.setSeckillTime(simpleDateFormat.format(orderDO.getCreateTime()));
+            UserDO userDO = userDOMapper.selectByPrimaryKey(orderDO.getUserId());
+            seckillLogVO.setUserId(userDO.getId());
+            seckillLogVO.setUserName(userDO.getName());
+            seckillLogVO.setPhone(userDO.getPhone());
+            seckillLogVOS.add(seckillLogVO);
+        }
+        return seckillLogVOS;
     }
 
     private SeckillModel convertFromSeckillDO(SeckillDO seckillDO){
@@ -217,8 +243,6 @@ public class SeckillServiceImpl implements SeckillService {
         BeanUtils.copyProperties(seckillDO,seckillModel);
         seckillModel.setStartTime(new DateTime(seckillDO.getStartTime()));
         seckillModel.setEndTime(new DateTime(seckillDO.getEndTime()));
-
-
         return seckillModel;
     }
 

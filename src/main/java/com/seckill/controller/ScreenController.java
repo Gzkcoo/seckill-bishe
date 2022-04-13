@@ -42,30 +42,30 @@ public class ScreenController extends BaseController{
     //新增并设置初筛规则
     @ApiOperation(value = "设置初筛规则",notes = "参数为-1时表示不限制")
     @ApiImplicitParams({
-            @ApiImplicitParam(name = "behindTimeDay", value = "一次记录逾期天数，-1为无限制", required = false,defaultValue = "-1",
+            @ApiImplicitParam(name = "behindTimeDay", value = "一次记录逾期天数，-1为无限制", required = true,defaultValue = "-1",
                     dataType = "int"),
-            @ApiImplicitParam(name = "behindTimeMoney", value = "一次记录逾期最大金额，-1为无限制", required = false,defaultValue = "-1",
+            @ApiImplicitParam(name = "behindTimeMoney", value = "一次记录逾期最大金额，-1为无限制", required = true,defaultValue = "-1",
                     dataType = "Double"),
-            @ApiImplicitParam(name = "behindTimeNum", value = "满足条件的逾期最大次数，-1为无限制", required = false,defaultValue = "-1",
+            @ApiImplicitParam(name = "behindTimeNum", value = "满足条件的逾期最大次数，-1为无限制", required = true,defaultValue = "-1",
                     dataType = "int"),
             @ApiImplicitParam(name = "valueTime", value = "此年后的统计", required = true,
                     dataType = "String"),
-            @ApiImplicitParam(name = "minAge", value = "最小年龄，-1为无限制", required = false,defaultValue = "-1",
+            @ApiImplicitParam(name = "minAge", value = "最小年龄，-1为无限制", required = true,defaultValue = "-1",
                     dataType = "int"),
-            @ApiImplicitParam(name = "dishonest", value = "-1为无限制，1为限制失信", required = false,defaultValue = "-1",
+            @ApiImplicitParam(name = "dishonest", value = "-1为无限制，1为限制失信", required = true,defaultValue = "-1",
                     dataType = "int"),
-            @ApiImplicitParam(name = "workState", value = "-1为无限制，0为工作，1为无/失业", required = false,defaultValue = "-1",
+            @ApiImplicitParam(name = "workState", value = "-1为无限制，0为工作，1为无/失业", required = true,defaultValue = "-1",
                     dataType = "int")
     })
     @RequestMapping(value = "/set",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
-    public CommonReturnType setScreenRule(@RequestParam(name = "behindTimeDay",required = false,defaultValue = "-1")Integer behindTimeDay ,
-                                          @RequestParam(name = "behindTimeMoney",required = false,defaultValue = "-1")Double behindTimeMoney ,
-                                          @RequestParam(name = "behindTimeNum",required = false,defaultValue = "-1")Integer behindTimeNum ,
-                                          @RequestParam(name = "valueTime",required = false)String valueTime ,
-                                          @RequestParam(name = "minAge",required = false,defaultValue = "-1")Integer minAge ,
-                                          @RequestParam(name = "dishonest",required = false,defaultValue = "-1")Integer dishonest ,
-                                          @RequestParam(name = "workState",required = false,defaultValue = "-1")Integer workState ) throws BusinessException {
+    public CommonReturnType setScreenRule(@RequestParam(name = "behindTimeDay")Integer behindTimeDay ,
+                                          @RequestParam(name = "behindTimeMoney")Double behindTimeMoney ,
+                                          @RequestParam(name = "behindTimeNum")Integer behindTimeNum ,
+                                          @RequestParam(name = "valueTime")String valueTime ,
+                                          @RequestParam(name = "minAge")Integer minAge ,
+                                          @RequestParam(name = "dishonest")Integer dishonest ,
+                                          @RequestParam(name = "workState")Integer workState ) throws BusinessException {
 
         //判断管理员是否登录
 
