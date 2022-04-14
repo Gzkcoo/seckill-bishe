@@ -82,7 +82,7 @@ public class OrderController extends BaseController{
     @PostConstruct
     public void init(){
         executorService = Executors.newFixedThreadPool(20);
-        orderCreateRateLimiter = RateLimiter.create(800);
+        orderCreateRateLimiter = RateLimiter.create(300);
     }
 
     //生成验证码

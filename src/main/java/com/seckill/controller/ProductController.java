@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -56,11 +58,11 @@ public class ProductController extends BaseController{
             @ApiImplicitParam(name = "risk", value = "风险等级", required = false,
                     dataType = "string"),
             @ApiImplicitParam(name = "valueDate", value = "起息日(精确到天)", required = false,
-                    dataType = "Date"),
+                    dataType = "string"),
             @ApiImplicitParam(name = "method", value = "结息方式", required = false,
                     dataType = "string"),
             @ApiImplicitParam(name = "endDate", value = "到期日(精确到天)", required = false,
-                    dataType = "Date"),
+                    dataType = "string"),
             @ApiImplicitParam(name = "sales", value = "产品销量", required = false,
                     dataType = "int"),
             @ApiImplicitParam(name = "description", value = "产品描述", required = true,
@@ -80,13 +82,13 @@ public class ProductController extends BaseController{
                                        @RequestParam(name = "personLimit",required = false)Double personLimit,
                                        @RequestParam(name = "dayLimit",required = false)Double dayLimit,
                                        @RequestParam(name = "risk",required = false)String risk,
-                                       @RequestParam(name = "valueDate",required = false)Date valueDate,
+                                       @RequestParam(name = "valueDate",required = false)String valueDate,
                                        @RequestParam(name = "method",required = false)String method,
-                                       @RequestParam(name = "endDate",required = false) Date endDate,
+                                       @RequestParam(name = "endDate",required = false) String endDate,
                                        @RequestParam(name = "sales",required = false)Integer sales,
                                        @RequestParam(name = "description")String description,
                                        @RequestParam(name = "flag")Byte flag,
-                                       @RequestParam(name = "stock")int stock) throws BusinessException {
+                                       @RequestParam(name = "stock")int stock) throws BusinessException, ParseException {
         //封装service请求用来创建商品
         ProductModel productModel = new ProductModel();
         productModel.setProductName(productName);
@@ -100,11 +102,16 @@ public class ProductController extends BaseController{
         productModel.setPersonLimit(personLimit);
         productModel.setDayLimit(dayLimit);
         productModel.setRisk(risk);
-        productModel.setValueDate(valueDate);
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        if (valueDate != null && valueDate != ""){
+            productModel.setValueDate(simpleDateFormat.parse(valueDate));
+        }
+        if (endDate != null && valueDate != ""){
+            productModel.setEndDate(simpleDateFormat.parse(endDate));
+        }
         productModel.setMethod(method);
-        productModel.setEndDate(endDate);
-        productModel.setSales(sales);
 
+        productModel.setSales(sales);
 
         ProductModel productModelForReturn = productService.createProduct(productModel);
         ProductVO productVO = convertVOFromModel(productModelForReturn);
