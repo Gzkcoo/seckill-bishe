@@ -3,6 +3,7 @@ package com.seckill.controller;
 import com.google.common.util.concurrent.RateLimiter;
 import com.seckill.dao.AccountDOMapper;
 import com.seckill.dao.OrderDOMapper;
+import com.seckill.dao.StockDOMapper;
 import com.seckill.dataobject.*;
 import com.seckill.error.BusinessException;
 import com.seckill.error.EmBusinessError;
@@ -67,6 +68,9 @@ public class OrderController extends BaseController{
 
     @Autowired
     private AccountDOMapper accountDOMapper;
+
+    @Autowired
+    private StockDOMapper stockDOMapper;
 
     @Autowired
     private OrderDOMapper orderDOMapper;
@@ -513,17 +517,6 @@ public class OrderController extends BaseController{
                                             @RequestParam(name = "token") String token) throws BusinessException {
 
 
-//    //封装下单请求
-//    @ApiOperation("用户下单---无隐藏地址接口")
-//    @RequestMapping(value = "/mycreate",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
-//    @ResponseBody
-//    public CommonReturnType createOrderTest(@RequestParam(name = "productId") Integer productId,
-//                                            @RequestParam(name = "amount") Integer amount,
-//                                            //@RequestParam(name = "u") String seckillToken,
-//                                            @RequestParam(name = "seckillId") Integer seckillId,
-//                                            @RequestParam(name = "token") String token) throws BusinessException {
-
-
 
         //guava限流
         if (!orderCreateRateLimiter.tryAcquire()){
@@ -582,6 +575,56 @@ public class OrderController extends BaseController{
 
         return CommonReturnType.create(null);
     }
+
+
+    //封装下单请求
+    @ApiOperation("用户下单---无隐藏地址接口")
+    @RequestMapping(value = "/test/create",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
+    @ResponseBody
+    public CommonReturnType createOrderTest2(@RequestParam(name = "productId") Integer productId,
+                                            @RequestParam(name = "amount") Integer amount,
+                                           // @RequestParam(name = "seckillToken") String seckillToken,
+                                            @RequestParam(name = "seckillId") Integer seckillId,
+                                            @RequestParam(name = "token") String token) throws BusinessException {
+
+
+
+        //判断是否库存已经售罄
+        if (redisTemplate.hasKey("seckill_product_stock_invalid_"+productId)){
+            throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
+        }
+
+
+        if (StringUtils.isEmpty(token)){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
+        if (userModel == null){
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN);
+        }
+
+
+
+        //加入库存流水init状态
+        String stockLogId = productService.initStockLog(productId,amount);
+//        //再去完成下单事务型消息机制
+//        if(!mqProducer.transactionAsyncReduceStock(userModel.getId(),productId,amount,seckillId,stockLogId)){
+//            throw new BusinessException(EmBusinessError.UNKNOWN_ERROR,"下单失败");
+//        }
+
+        OrderModel orderModel = orderService.createOrder(userModel.getId(),productId,1,seckillId,stockLogId);
+        if (orderModel != null){
+            redisTemplate.opsForValue().set("seckill_"+seckillId+"_user_"+userModel.getId(),"true");
+            redisTemplate.delete("seckill_token_"+seckillId+"_userId_"+userModel.getId());
+            //订单信息
+            redisTemplate.opsForValue().set("order_seckillId_"+ seckillId+ "_userId_"+userModel.getId(),orderModel);
+        }
+
+
+        return CommonReturnType.create(null);
+    }
+
 
     public String EncodeByMd5(String str) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         //确定计算方法

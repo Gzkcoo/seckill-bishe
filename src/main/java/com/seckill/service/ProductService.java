@@ -32,6 +32,8 @@ public interface ProductService {
     //初始化库存流水
     String initStockLog(Integer productId,Integer amount);
 
+    //更新商品
+    ProductModel updateProduct(ProductModel productModel);
 
 
 }

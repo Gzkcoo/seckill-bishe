@@ -162,6 +162,16 @@ public class ProductServiceImpl implements ProductService {
         return stockLogDO.getId();
     }
 
+    @Override
+    @Transactional
+    public ProductModel updateProduct(ProductModel productModel) {
+        ProductDO productDO = this.convertProductDoFromProductModel(productModel);
+        productDOMapper.updateByPrimaryKeySelective(productDO);
+        StockDO stockDO = this.convertStockDOFromProductModel(productModel);
+        stockDOMapper.updateByProductIdSelective(stockDO);
+        return this.getProductById(productDO.getId());
+    }
+
     private ProductModel convertModelFromDataObject(ProductDO productDO,StockDO stockDO){
         ProductModel productModel = new ProductModel();
         BeanUtils.copyProperties(productDO,productModel);
