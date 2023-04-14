@@ -14,6 +14,7 @@ import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +38,9 @@ public class ProductController extends BaseController{
 
     @Autowired
     private ValidatorImpl validator;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     //创建商品
     @ApiOperation("增加商品")
@@ -241,9 +245,17 @@ public class ProductController extends BaseController{
         productModel.setMethod(method);
 
         productModel.setSales(sales);
-
-
         ProductModel productModelForReturn = productService.updateProduct(productModel);
+
+        //秒杀商品需要修改redis
+        if(productModelForReturn.getFlag() == 1){
+            //删除售罄标识
+            redisTemplate.delete("seckill_product_stock_invalid_"+productModel.getId());
+            redisTemplate.delete("seckill_product_stock_"+productModel.getId());
+            redisTemplate.opsForValue().set("seckill_product_stock_"+productModel.getId(),productModel.getStock());
+
+        }
+
         ProductVO productVO = convertVOFromModel(productModelForReturn);
 
         return CommonReturnType.create(productVO);
