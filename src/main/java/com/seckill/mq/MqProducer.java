@@ -78,9 +78,10 @@ public class MqProducer {
                     return LocalTransactionState.ROLLBACK_MESSAGE;
                 }
                 if (orderModel != null){
-//                redisTemplate.opsForValue().set("ex_orderId_"+orderModel.getId(),"true");
-//                redisTemplate.opsForValue().set("ex_orderId_"+orderModel.getId()+"_1",productId);
-//                redisTemplate.expire("ex_orderId_"+orderModel.getId(),30, TimeUnit.MINUTES);
+                    //订单入缓存
+                    redisTemplate.opsForValue().set("ex_orderId_"+orderModel.getId(),"true");
+                    redisTemplate.opsForValue().set("ex_orderId_"+orderModel.getId()+"_1",productId);
+                    redisTemplate.expire("ex_orderId_"+orderModel.getId(),30, TimeUnit.MINUTES);
                     redisTemplate.opsForValue().set("seckill_"+seckillId+"_user_"+userId,"true");
                     redisTemplate.delete("seckill_token_"+seckillId+"_userId_"+userId);
                 //订单信息

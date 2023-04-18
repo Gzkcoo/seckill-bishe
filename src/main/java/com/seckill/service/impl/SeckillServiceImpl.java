@@ -196,7 +196,7 @@ public class SeckillServiceImpl implements SeckillService {
         seckillDO.setEndTime(new Date());
         seckillDOMapper.updateByPrimaryKeySelective(seckillDO);
 
-        redisTemplate.delete("seckill_validate_id"+seckillId);
+        redisTemplate.delete("seckill_validate_"+seckillId);
         redisTemplate.opsForValue().set("seckill_door_count_"+seckillId,0);
         redisTemplate.delete("seckill_" + seckillId);
 
