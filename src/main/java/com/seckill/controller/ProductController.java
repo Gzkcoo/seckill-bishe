@@ -205,7 +205,7 @@ public class ProductController extends BaseController{
     })
     @RequestMapping(value = "/update",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
-    public CommonReturnType createProduct(@RequestParam(name = "id")Integer id,
+    public CommonReturnType updateProduct(@RequestParam(name = "id")Integer id,
                                           @RequestParam(name = "productName")String productName,
                                           @RequestParam(name = "deadline",required = false)Integer deadline,
                                           @RequestParam(name = "rate") Double rate,
